@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun SYSTEM "https://nmap.org/schema/nmap.dtd">
+<nmaprun scanner="nmap" args="nmap -sV -O -oX network_scan.xml 10.100.10.0/24 10.100.20.0/24" start="1780791486" version="7.94" xmloutputversion="1.05">
+  
+  <host>
+    <status state="up" reason="echo-reply"/>
+    <address addr="10.100.10.1" addrtype="ipv4"/>
+    <hostnames><hostname name="router-core-alpha.internal.corp" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="22"><state state="open"/><service name="ssh" product="Cisco SSHd" version="1.25"/></port>
+      <port protocol="tcp" portid="80"><state state="open"/><service name="http" product="Cisco IOS httpd"/></port>
+    </ports>
+    <os><osmatch name="Cisco IOS 15.6"/></os>
+  </host>
+
+  <host>
+    <status state="up" reason="echo-reply"/>
+    <address addr="10.100.10.11" addrtype="ipv4"/>
+    <hostnames><hostname name="exec-pc-01.internal.corp" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="445"><state state="open"/><service name="microsoft-ds" product="Windows 11 workstation service"/></port>
+    </ports>
+    <os><osmatch name="Microsoft Windows 11"/></os>
+  </host>
+
+  <host>
+    <status state="up" reason="echo-reply"/>
+    <address addr="10.100.10.22" addrtype="ipv4"/>
+    <hostnames><hostname name="eng-workstation-02.internal.corp" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="22"><state state="open"/><service name="ssh" product="OpenSSH" version="9.2p1 Ubuntu"/></port>
+    </ports>
+    <os><osmatch name="Linux 5.15 (Ubuntu)"/></os>
+  </host>
+
+  <host>
+    <status state="up" reason="echo-reply"/>
+    <address addr="10.100.10.33" addrtype="ipv4"/>
+    <hostnames><hostname name="office-printer.internal.corp" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="9100"><state state="open"/><service name="jetdirect" product="HP JetDirect"/></port>
+    </ports>
+    <os><osmatch name="Embedded Print Server OS"/></os>
+  </host>
+
+  <host>
+    <status state="up" reason="echo-reply"/>
+    <address addr="10.100.10.100" addrtype="ipv4"/>
+    <hostnames><hostname name="dhcp-pool-stray.internal.corp" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="80"><state state="open"/><service name="http" product="nginx" version="1.24.0"/></port>
+    </ports>
+    <os><osmatch name="Linux 5.4"/></os>
+  </host>
+
+  <host>
+    <status state="up" reason="echo-reply"/>
+    <address addr="10.100.20.1" addrtype="ipv4"/>
+    <hostnames><hostname name="router-branch-beta.restricted.ops" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="23"><state state="open"/><service name="telnet" product="Cisco IOS telnetd"/></port>
+    </ports>
+    <os><osmatch name="Cisco IOS 15.7"/></os>
+  </host>
+
+  <host>
+    <status state="up" reason="echo-reply"/>
+    <address addr="10.100.20.11" addrtype="ipv4"/>
+    <hostnames><hostname name="hq-dc-01.restricted.ops" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="53"><state state="open"/><service name="domain" product="Microsoft DNS"/></port>
+      <port protocol="tcp" portid="389"><state state="open"/><service name="ldap" product="Microsoft Active Directory LDAP"/></port>
+    </ports>
+    <os><osmatch name="Microsoft Windows Server 2022"/></os>
+  </host>
+
+  <host>
+    <status state="up" reason="echo-reply"/>
+    <address addr="10.100.20.22" addrtype="ipv4"/>
+    <hostnames><hostname name="scada-historian-db.restricted.ops" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="1433"><state state="open"/><service name="ms-sql-s" product="Microsoft SQL Server 2019"/></port>
+    </ports>
+    <os><osmatch name="Linux / Ubuntu Server"/></os>
+  </host>
+
+  <host>
+    <status state="up" reason="echo-reply"/>
+    <address addr="10.100.20.33" addrtype="ipv4"/>
+    <hostnames><hostname name="nas-backup-vault.restricted.ops" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="445"><state state="open"/><service name="microsoft-ds" product="Samba NAS Service"/></port>
+    </ports>
+    <os><osmatch name="TrueNAS (FreeBSD)"/></os>
+  </host>
+
+  <host>
+    <status state="up" reason="echo-reply"/>
+    <address addr="10.100.20.44" addrtype="ipv4"/>
+    <hostnames><hostname name="hmi-operator-panel.restricted.ops" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="4840"><state state="open"/><service name="opc-ua" product="Unified Automation Server"/></port>
+    </ports>
+    <os><osmatch name="Windows 10 IoT Enterprise"/></os>
+  </host>
+
+  <runstats>
+    <finished time="1780791726" timestr="Sat Jun  6 21:05:00 2026" summary="Nmap done; 10 hosts up"/>
+  </runstats>
+</nmaprun>
