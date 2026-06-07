@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+
+{% block title %}Application Management Console{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    
+    <div class="mb-5 text-center text-md-start">
+        <h1 class="fw-bold text-dark mb-1">Network Tools Console</h1>
+        <p class="text-muted">Select an application environment below to manage infrastructure configurations.</p>
+    </div>
+<div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-white p-3 h-100 d-flex flex-row align-items-center">
+                <div class="bg-primary-subtle text-primary rounded p-3 me-3">
+                    <i class="bi bi-diagram-3-fill fs-4"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted small fw-bold mb-1 text-uppercase">Monitored Networks</h6>
+                    <h3 class="fw-bold mb-0 text-dark">{{ cisco_stats.total_networks }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-white p-3 h-100 d-flex flex-row align-items-center">
+                <div class="bg-info-subtle text-info rounded p-3 me-3">
+                    <i class="bi bi-file-earmark-code-fill fs-4"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted small fw-bold mb-1 text-uppercase">Configs Ingested</h6>
+                    <h3 class="fw-bold mb-0 text-dark">{{ cisco_stats.total_configs }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-white p-3 h-100 d-flex flex-row align-items-center">
+                <div class="bg-danger-subtle text-danger rounded p-3 me-3">
+                    <i class="bi bi-shield-fill-x fs-4"></i>
+                </div>
+                <div>
+                    <h6 class="text-muted small fw-bold mb-1 text-uppercase">Vulnerability Findings</h6>
+                    <h3 class="fw-bold mb-0 text-danger">{{ cisco_stats.total_findings }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 bg-dark text-white p-3 h-100 d-flex flex-row align-items-center justify-content-between position-relative overflow-hidden">
+                <div class="d-flex align-items-center">
+                    <div class="bg-secondary rounded p-3 me-3 bg-opacity-25 border border-secondary">
+                        <i class="bi bi-shield-check-fill fs-4 text-success"></i>
+                    </div>
+                    <div>
+                        <h6 class="text-white-50 small fw-bold mb-1 text-uppercase" style="letter-spacing: 0.5px;">Active Engine Rules</h6>
+                        <h3 class="fw-bold mb-0 text-white">{{ cisco_stats.sig_active }} <span class="fs-6 fw-normal text-white-50">/ {{ cisco_stats.sig_total }}</span></h3>
+                    </div>
+                </div>
+                <div class="text-end small">
+                    <span class="badge bg-danger mb-1 d-block" title="Active High Risk Signatures">H: {{ cisco_stats.sig_high }}</span>
+                    <span class="badge bg-warning text-dark mb-1 d-block" title="Active Medium Risk Signatures">M: {{ cisco_stats.sig_med }}</span>
+                    <span class="badge bg-info text-dark d-block" title="Active Low Risk Signatures">L: {{ cisco_stats.sig_low }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-4">
+        
+        <div class="col-xl-4 col-md-6">
+            <div class="card h-100 shadow-sm border-0 bg-white">
+                <div class="card-body d-flex flex-column p-4">
+                    
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary-subtle text-primary rounded p-3 fs-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="bi bi-cpu-fill"></i>
+                        </div>
+                        <div>
+                            <h4 class="h5 fw-bold text-dark mb-0">Cisco Configuration Analyzer</h4>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle mt-1">Active</span>
+                        </div>
+                    </div>
+                    
+                    <p class="text-secondary small flex-grow-1">
+                        Upload Cisco IOS config dumps to map network environments, interface groups, and active access control lists into an interactive security matrix.
+                    </p>
+                    
+                    <div class="row g-2 border-top pt-3 mt-3 text-center bg-light-subtle rounded p-2 mb-3">
+                        <div class="col-4 border-end">
+                            <span class="d-block text-muted xxs fw-bold text-uppercase">Environments</span>
+                            <span class="fs-5 fw-bold text-dark">{{ cisco_stats.total_networks }}</span>
+                        </div>
+                        <div class="col-4 border-end">
+                            <span class="d-block text-muted xxs fw-bold text-uppercase">Configs</span>
+                            <span class="fs-5 fw-bold text-dark">{{ cisco_stats.total_configs }}</span>
+                        </div>
+                        <div class="col-4">
+                            <span class="d-block text-muted xxs fw-bold text-uppercase">Security Risks</span>
+                            {% if cisco_stats.total_findings > 0 %}
+                                <span class="fs-5 fw-bold text-danger d-block">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ cisco_stats.total_findings }}
+                                </span>
+                            {% else %}
+                                <span class="fs-5 fw-bold text-success d-block">0</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-auto">
+                        <a href="/network/" class="btn btn-primary fw-semibold">
+                            Launch Application 
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6">
+    <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body d-flex flex-column p-4">
+            
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-success-subtle text-success rounded p-3 fs-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="bi bi-server"></i>
+                </div>
+                <div>
+                    <h4 class="h5 fw-bold text-dark mb-0">Host Telemetry Inventory</h4>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle mt-1">Active</span>
+                </div>
+            </div>
+            
+            <p class="text-secondary small flex-grow-1">
+                Ingest structured network endpoint datasets (NMAP XML file records) to track active nodes, inventory open target ports, flag listening software suites, and analyze host systems.
+            </p>
+            
+            <div class="d-grid mt-auto">
+                <a href="/hosts/" class="btn btn-success fw-semibold text-white">
+                    Open Hosts Explorer <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="col-xl-4 col-md-6">
+    <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body d-flex flex-column p-4">
+            
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary-subtle text-primary rounded p-3 fs-3 me-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="bi bi-diagram-3-fill"></i>
+                </div>
+                <div>
+                    <h4 class="h5 fw-bold text-dark mb-0">Dynamic Topology Map</h4>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle mt-1">Layer 2 Engine Active</span>
+                </div>
+            </div>
+            
+            <p class="text-secondary small flex-grow-1">
+                Correlate Layer 3 infrastructure configurations with Layer 2 MAC address CAM tables. Automatically render interactive, live link node diagrams mapping endpoints to physical switch interface ports.
+            </p>
+
+            <div class="bg-light rounded-3 p-2 mb-3 border border-dashed d-flex align-items-center justify-content-center text-muted" style="height: 65px;">
+                <div class="small text-center">
+                    <span class="badge bg-dark font-monospace xsmall">Switch</span> 
+                    <span class="text-success font-monospace px-1">🡌───🡎</span> 
+                    <span class="badge bg-primary font-monospace xsmall">Host Endpoint</span>
+                </div>
+            </div>
+            
+            <div class="d-grid mt-auto">
+                <a href="/topology/" class="btn btn-primary fw-semibold text-white">
+                    Launch Interactive Map <i class="bi bi-box-arrow-up-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+</div>
+
+<style>
+    /* Styling to render placeholder dashed card boxes */
+    .border-dashed {
+        border: 2px dashed #dee2e6 !important;
+    }
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Find our help tip by its ID element
+        var helpTipEl = document.getElementById('securityHelpTip');
+        
+        // Initialize the Bootstrap Popover instance if the element exists on screen
+        if (helpTipEl) {
+            new bootstrap.Popover(helpTipEl);
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Security Signatures Manager</h2>
+            <p class="text-muted">Regex-driven scanning profiles for auditing Cisco device configurations.</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newSignatureModal">
+            ➕ Add New Signature
+        </button>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 25%;">Rule Identity & Version</th>
+                            <th style="width: 10%;">Severity</th>
+                            <th style="width: 25%;">Regex Expression Pattern</th>
+                            <th style="width: 10%;">Status</th>
+                            <th style="width: 15%;">Quick Actions</th>
+                            <th style="width: 15%;">Version Snapshots</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sig in signatures %}
+                        <tr>
+                            <td>
+                                <span class="fw-bold text-dark d-block">{{ sig.rule_name }}</span>
+                                <small class="text-muted d-block text-truncate" style="max-width: 280px;" title="{{ sig.description }}">
+                                    {{ sig.description }}
+                                </small>
+                            </td>
+                            <td>
+                                {% if sig.severity == 'High' %}
+                                    <span class="badge bg-danger">High</span>
+                                {% elif sig.severity == 'Medium' %}
+                                    <span class="badge bg-warning text-dark">Medium</span>
+                                {% else %}
+                                    <span class="badge bg-info text-dark">Low</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code class="bg-light p-1 rounded text-danger break-all" style="word-break: break-all;">
+                                    {{ sig.pattern }}
+                                </code>
+                            </td>
+                            <td>
+                                {% if sig.is_active %}
+                                    <span class="badge bg-success">Active Engine</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Deactivated</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                <a href="{% url 'characterization:toggle_signature' sig.id %}" ...>                                        
+                                    {% if sig.is_active %}Deactivate{% else %}Activate{% endif %}
+                                    </a>
+                                <a href="{% url 'characterization:backup_signature' sig.id %}" ...>  💾 Snapshot
+                                    </a>
+                                </div>
+                            </td>
+                            <td>
+                                {% if sig.backups.all %}
+                                <form action="{% url 'restore_signature_post' %}" method="POST" class="d-flex gap-1 align-items-center">
+                                    {% csrf_token %}
+                                    <select name="backup_id" class="form-select form-select-sm" style="font-size: 0.8rem;">
+                                        {% for backup in sig.backups.all %}
+                                            <option value="{{ backup.id }}">v{{ backup.version }} ({{ backup.backed_up_at|date:"M d, H:i" }})</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-danger px-2" style="font-size: 0.75rem;" onclick="return confirm('Rollback active scanner rules to this historical version?');">
+                                        Revert
+                                    </button>
+                                </form>
+                                {% else %}
+                                    <span class="text-muted small italic">No snapshots available</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center p-5 text-muted">
+                                <h5>⚠️ No Scanning Signatures Loaded</h5>
+                                <p class="mb-0">Click "Add New Signature" above to deploy your first custom regex pattern tracking criteria.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="newSignatureModal" tabindex="-1" aria-labelledby="newSignatureModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="newSignatureModalLabel">Deploy New Configuration Audit Signature</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{% url 'characterization:signatures_dashboard' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label for="rule_name" class="form-label fw-bold">Signature Constant Name</label>
+                            <input type="text" class="form-control" id="rule_name" name="rule_name" placeholder="e.g., TELNET_ENABLED" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="severity" class="form-label fw-bold">Risk Assessment Level</label>
+                            <select class="form-select" id="severity" name="severity">
+                                {% for choice in severity_choices %}
+                                    <option value="{{ choice }}" {% if choice == 'Medium' %}selected{% endif %}>{{ choice }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="pattern" class="form-label fw-bold">Regular Expression Rule Pattern</label>
+                            <input type="text" class="form-control" id="pattern" name="pattern" placeholder="e.g., transport input.*telnet" required>
+                            <div class="form-text">Evaluated linearly against the parsed Cisco configuration file string content records.</div>
+                        </div>
+                        <div class="col-12">
+                            <label for="description" class="form-label fw-bold">Compliance Finding Context/Remediation Policy</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" placeholder="Provide background on what this vulnerability implies and how to disable or fix it if spotted..." required></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Discard</button>
+                    <button type="submit" class="btn btn-success">Save & Push Rule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

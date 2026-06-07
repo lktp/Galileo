@@ -1,0 +1,20 @@
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Python caching artifacts
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Local Databases & Media backups
+*.sqlite3
+media/
+static_root/
+
+# IDE/OS specific configs
+.vscode/
+.idea/
+.DS_Store

@@ -1,0 +1,12 @@
+What I have done:
+
+
+5 June 2026
+    1. Got it to parse cisco configs
+    2. Got it to accept database entries for things to look for.
+
+What I am going to do on sunday:
+    1. Make it do a network map.
+        1a. Maps each router/switch based on the config
+        1b. Can add nmap / pingsweeps and will help map that.
+    2. Make a form for updating signatures

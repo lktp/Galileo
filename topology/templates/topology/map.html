@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% load static %} {% block content %}
+<div class="container-fluid mt-4">
+    <h2>Network Topology Visualization Map</h2>
+    <p class="text-muted">Dynamic infrastructure rendering engine synced with device attachment profiles.</p>
+    <link href="{% static 'topology/css/vis-network.min.css' %}" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="{% static 'topology/js/vis-network.min.js' %}"></script>
+    <div class="card mb-4">
+        <div class="card-body bg-light">
+            <form method="GET" id="filterForm" class="row g-3 align-items-center">
+                <div class="col-auto">
+                    <label for="network_filter" class="col-form-label fw-bold">Select Scope Network:</label>
+                </div>
+                <div class="col-md-4">
+                    <select name="network_filter" id="network_filter" class="form-select" onchange="document.getElementById('filterForm').submit();">
+                        <option value="">-- All Discovered Networks --</option>
+                        {% for net in networks %}
+                            <option value="{{ net.id }}" {% if net.id|slugify == active_filter_id %}selected{% endif %}>
+                                {{ net.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div id="network-topology-canvas" style="width: 100%; height: 650px; background-color: #f8f9fa; position: relative;">
+                <div id="map-loader" class="position-absolute top-50 start-50 translate-middle text-center">
+                    <div class="spinner-border text-success" role="status"></div>
+                    <p class="mt-2 text-muted fw-bold">Compiling Topology Mappings...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+window.onload = function() {
+    const canvasContainer = document.getElementById('network-topology-canvas');
+    const loader = document.getElementById('map-loader');
+    
+    if (typeof vis === 'undefined') {
+        console.error("Vis.js failed to load.");
+        canvasContainer.innerHTML = `<div class="alert alert-danger m-3">External Mapping Library (Vis.js) failed to load.</div>`;
+        return;
+    }
+
+    const activeFilter = "{{ active_filter_id }}";
+    let apiUrl = "/topology/network-graph-json/";
+    if (activeFilter) {
+        apiUrl += `?network_filter=${activeFilter}`;
+    }
+
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            if (loader) loader.style.display = 'none';
+
+            if (!data.nodes || data.nodes.length === 0) {
+                canvasContainer.innerHTML = `
+                    <div class="text-center p-5">
+                        <h4 class="text-warning">⚠️ No Map Assets Generated</h4>
+                        <p class="text-muted">The backend JSON array returned empty.</p>
+                    </div>`;
+                return;
+            }
+
+            // FIX 1: We use 'nodes' as our dataset reference variable
+            const nodes = new vis.DataSet(data.nodes);
+            const edges = new vis.DataSet(data.edges);
+            const graphData = { nodes: nodes, edges: edges };
+
+            const options = {
+                nodes: {
+                    shape: 'dot',
+                    size: 24,
+                    font: { size: 14, color: '#212529', face: 'monospace' },
+                    borderWidth: 2
+                },
+                edges: {
+                    width: 2,
+                    font: { size: 11, align: 'top' },
+                    smooth: { type: 'continuous' }
+                },
+                groups: {
+                    switch: { color: { background: '#0d6efd', border: '#0a58ca' }, shape: 'square' },
+                    endpoint: { color: { background: '#198754', border: '#146c43' }, shape: 'dot' }
+                },
+                physics: {
+                    barnesHut: { gravitationalConstant: -3000, centralGravity: 0.3, springLength: 150 },
+                    stabilization: { iterations: 150 }
+                }
+            };
+
+            // FIX 2: Establish the reference mapping instance name matching your event handlers
+            const networkGraph = new vis.Network(canvasContainer, graphData, options);
+            let originalNodes = null;
+
+            // Handle Node Selection Events
+            networkGraph.on("selectNode", function (params) {
+                const selectedId = params.nodes[0];
+                
+                if (!selectedId.startsWith("host_")) {
+                    return; 
+                }
+
+                const dbHostId = selectedId.split("_")[1];
+                console.log(`Evaluating reachability paths from source host ID: ${dbHostId}`);
+
+                if (!originalNodes) {
+                    originalNodes = JSON.parse(JSON.stringify(data.nodes));
+                }
+
+                fetch(`/topology/api/reachability/${dbHostId}/`)
+                    .then(response => response.json())
+                    .then(matrix => {
+                        const updatedNodes = data.nodes.map(node => {
+                            // Highlight selected node turquoise
+                            if (node.id === matrix.source_id) {
+                                return { 
+                                    ...node, 
+                                    color: { background: '#0dcaf0', border: '#0aa2c0' },
+                                    chosen: false // Overrides Vis.js blue hover overlay forcing our color
+                                };
+                            }
+                            
+                            // Turn blocked nodes Red
+                            if (matrix.blocked.includes(node.id)) {
+                                return { 
+                                    ...node, 
+                                    color: { background: '#dc3545', border: '#b02a37' },
+                                    chosen: false,
+                                    title: node.title + "<br><b style='color:#dc3545;'>⚠️ ACL BLOCKED CHANNEL</b>"
+                                };
+                            }
+                            
+                            // Keep allowed peers green
+                            return { ...node, chosen: false };
+                        });
+
+                        // FIX 3: Update our defined dataset target variable
+                        nodes.update(updatedNodes);
+                    });
+            });
+
+            // Reset mapping styles back to green/blue base baseline monitor rules
+            networkGraph.on("deselectNode", function (params) {
+                if (originalNodes) {
+                    console.log("Resetting network map to baseline monitoring colors...");
+                    nodes.update(originalNodes);
+                }
+            });
+        })
+        .catch(error => {
+            console.error("Critical Mapping Error:", error);
+            if (loader) loader.style.display = 'none';
+        });
+};
+</script>
+{% endblock %}

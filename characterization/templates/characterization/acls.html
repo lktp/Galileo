@@ -1,0 +1,115 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-dark mb-1">Network Access Matrix & Policy Auditor</h1>
+            <p class="text-muted small mb-0">
+                Network Focus perimeter: <span class="badge bg-secondary font-monospace">{{ network.name }}</span>
+            </p>
+        </div>
+        <div>
+            <a href="/cisco/network/{{ network.id }}/" class="btn btn-sm btn-outline-dark fw-semibold">
+                <i class="bi bi-arrow-left-short me-1"></i>Return to Network Manager
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-dark text-white py-3 d-flex align-items-center">
+            <h5 class="card-title h6 fw-bold mb-0 me-2">
+                <i class="bi bi-grid-3x3-gap-fill text-info me-2"></i>Calculated Subnet Path Matrix
+            </h5>
+            <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace xsmall">Live Compilation</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0 small">
+                    <thead class="table-light font-monospace text-secondary text-uppercase xsmall border-bottom">
+                        <tr>
+                            <th class="ps-4" style="width: 25%;">Origin Device / Gateway</th>
+                            <th style="width: 25%;">Source Subnet / Segment</th>
+                            <th style="width: 10%;" class="text-center">Directional Flow</th>
+                            <th style="width: 25%;">Destination Subnet / Target</th>
+                            <th style="width: 15%;" class="pe-4 text-end">Protocol State</th>
+                        </tr>
+                    </thead>
+                    <tbody class="border-top-0">
+                        <tr>
+                            <td class="ps-4 fw-bold text-dark">
+                                <i class="bi bi-cpu-fill text-secondary me-2"></i>router_core_alpha
+                            </td>
+                            <td>
+                                <span class="font-monospace bg-light border p-1 rounded small">0.0.0.0/0 (Any Network)</span>
+                            </td>
+                            <td class="text-center text-success fs-5 py-2">
+                                <i class="bi bi-arrow-right-circle-fill"></i>
+                            </td>
+                            <td>
+                                <span class="font-monospace bg-light border p-1 rounded small">0.0.0.0/0 (Any Network)</span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <span class="badge bg-danger text-white font-monospace uppercase xsmall">PERMIT ALL (IP)</span>
+                            </td>
+                        </tr>
+                        
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4 text-muted opacity-25">
+
+    <div class="mb-3">
+        <h3 class="h5 fw-bold text-dark mb-1">
+            <i class="bi bi-shield-slash-fill text-danger me-2"></i>Active Vulnerability Audit Logs
+        </h3>
+        <p class="text-muted small">Automated regex scanning logs highlighting explicit infrastructure posture risks matched directly to hardware definitions.</p>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            {% for finding in findings %}
+            <div class="card mb-2 border-start border-danger border-3 shadow-sm">
+                <div class="card-body py-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1.5 flex-wrap">
+                            <span class="badge {% if finding.signature.severity == 'High' %}bg-danger text-white{% else %}bg-warning text-dark{% endif %} font-monospace xsmall uppercase fw-bold px-2 py-1">
+                                {{ finding.signature.severity }} Risk
+                            </span>
+                            
+                            <span class="badge bg-dark text-info border border-secondary font-monospace xsmall px-2 py-1">
+                                <i class="bi bi-cpu-fill me-1 text-info"></i>{{ finding.device.hostname|default:"Unknown System Asset" }}
+                            </span>
+                            
+                            <h5 class="h6 fw-bold text-dark mb-0 ms-1 font-monospace text-uppercase small">{{ finding.signature.rule_name }}</h5>
+                        </div>
+                        
+                        <p class="text-secondary small mb-2 ps-1">{{ finding.signature.description }}</p>
+                        
+                        <div class="bg-light p-2.5 rounded border font-monospace text-danger xsmall ms-1" style="max-width: fit-content;">
+                            <i class="bi bi-terminal me-1 text-secondary"></i><code>{{ finding.matched_text }}</code>
+                        </div>
+                    </div>
+                    
+                    <div class="text-end text-muted font-monospace xsmall pe-2 d-none d-md-block">
+                        <i class="bi bi-clock-history me-1"></i>Captured: {{ finding.created_at|date:"H:i:s" }}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-5 bg-white rounded-3 shadow-sm border border-dashed text-muted">
+                <i class="bi bi-shield-check text-success display-4 d-block mb-3"></i>
+                <h5 class="fw-bold text-dark mb-1">Configuration Posture Compliant</h5>
+                <p class="small mb-0 text-secondary">No active configuration signature vulnerabilities have been flagged across any mapped systems on this profile network.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

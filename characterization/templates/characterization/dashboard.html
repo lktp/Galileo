@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+
+{% block title %}Network Security Operations Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .matrix-table th, .matrix-table td {
+        min-width: 130px;
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background-color: #f8f9fa !important;
+        z-index: 1;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3"> 
+
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+            <h1 class="h3 mb-1 text-dark fw-bold">Security Topology Dashboard</h1>
+            <p class="text-muted mb-0">Analyze inter-VLAN and firewall communications matrices natively.</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary px-4 py-2 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadConfigModal">
+                <i class="bi bi-cloud-arrow-up-fill me-2"></i>Upload New Config
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        
+        <div class="col-xl-3 col-lg-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-bottom fw-bold text-dark py-3">
+                    <i class="bi bi-diagram-3-fill me-2 text-primary"></i>Monitored Networks
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for net in networks %}
+                        <a href="?network_id={{ net.id }}" class="list-group-item list-group-item-action p-3 d-flex justify-content-between align-items-center {% if selected_network.id == net.id %}active fw-bold{% endif %}">
+                            <div>
+                                <div class="mb-0 text-truncate" style="max-width: 180px;">{{ net.name }}</div>
+                                <small class="{% if selected_network.id == net.id %}text-white-50{% else %}text-muted{% endif %} xxs d-block">{{ net.created_at|date:"M d, Y" }}</small>
+                            </div>
+                            <span class="badge rounded-pill {% if selected_network.id == net.id %}bg-light text-dark{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                                {{ net.configs.count }} files
+                            </span>
+                        </a>
+                    {% empty %}
+                        <div class="p-4 text-center text-muted small">No target environments populated yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-9 col-lg-8">
+            {% if selected_network %}
+                
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="h5 mb-1 fw-bold text-dark">{{ selected_network.name }}</h4>
+                            <p class="text-muted small mb-0">{{ selected_network.description|default:"No explicit description provided." }}</p>
+                        </div>
+                        <div class="d-flex gap-3 small text-secondary">
+                            <span class="d-flex align-items-center"><span class="badge bg-success me-1">&nbsp;</span> Permit</span>
+                            <span class="d-flex align-items-center"><span class="badge bg-danger me-1">&nbsp;</span> Deny</span>
+                            <span class="d-flex align-items-center"><span class="badge bg-secondary me-1">&nbsp;</span> Implicit Deny</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover align-middle matrix-table mb-0 text-center">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" class="text-start ps-4 sticky-col fw-bold text-secondary bg-light">
+                                            Src &rarr;<br>&darr; Dst
+                                        </th>
+                                        {% for dst in unique_destinations %}
+                                            <th scope="col" class="fw-semibold px-3 py-3 small">{{ dst }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in grid_rows %}
+                                    <tr>
+                                        <th scope="row" class="text-start ps-4 sticky-col fw-semibold text-dark border-end small">
+                                            {{ row.source }}
+                                        </th>
+                                        {% for cell in row.cells %}
+                                            <td class="p-2">
+                                                {% if cell.status == 'permit' %}
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle py-2 w-100 d-block rounded-pill">
+                                                        <i class="bi bi-shield-check"></i> Permit
+                                                    </span>
+                                                {% elif cell.status == 'deny' %}
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-2 w-100 d-block rounded-pill">
+                                                        <i class="bi bi-shield-slash"></i> Deny
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted small py-2 w-100 d-block bg-light-subtle rounded-pill border border-transparent">
+                                                        <i class="bi bi-dash-circle text-black-50"></i> Implicit
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% if network_findings %}
+                        <div class="card shadow-sm border-0 mt-4">
+                            <div class="card-header bg-danger text-white py-3 d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0 h6 fw-bold">
+                                    <i class="bi bi-shield-exclamation me-2"></i>Security Compliance & Vulnerability Audit Log
+                                </h5>
+                                
+                                <a tabindex="0" 
+                                class="btn btn-sm btn-outline-light border-0 py-0 px-2 lh-1" 
+                                id="securityHelpTip"
+                                data-bs-toggle="popover" 
+                                data-bs-trigger="hover focus" 
+                                data-bs-placement="left"
+                                data-bs-html="true"
+                                title="<i class='bi bi-search me-1 text-warning'></i> Audit Scan Signatures" 
+                                data-bs-content="<small class='d-block text-muted mb-2'>Our automated engine flags these high-risk patterns:</small>
+                                                    <ul class='ps-3 mb-0 text-start small' style='font-size: 0.8rem;'>
+                                                        <li class='mb-1'><strong>Permissive Rules:</strong> <code>permit ip any any</code> statements bypassing firewall restrictions.</li>
+                                                        <li class='mb-1'><strong>Cleartext Passwords:</strong> Legacy <code>enable password</code> strings lacking strong hashing.</li>
+                                                        <li class='mb-1'><strong>Insecure Management:</strong> Unencrypted access protocols like <code>Telnet (port 23)</code> or plain HTTP.</li>
+                                                        <li><strong>Default SNMP:</strong> Predictable public/private monitoring strings exposed globally.</li>
+                                                    </ul>">
+                                    <i class="bi bi-question-circle-fill fs-5"></i>
+                                </a>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0 small">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 100px;">Severity</th>
+                                            <th style="width: 100px;">Device</th>
+                                            <th>Raw Code Snippet</th>
+                                            <th>Vulnerability Analysis</th>
+                                        </tr>
+                                    </thead>
+                      <tbody class="border-top-0">
+                            {% for finding in network_findings %}
+                            <tr>
+                                <td class="align-middle">
+                                    <span class="badge {% if finding.signature.severity == 'High' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                        {{ finding.signature.severity }}
+                                    </span>
+                                </td>
+                                <td class="font-monospace text-muted align-middle small">
+                                    {{ finding.device.hostname|default:"System" }}
+                                </td>
+                                <td class="font-monospace text-danger align-middle small">
+                                    <code>{{ finding.matched_text }}</code>
+                                </td>
+                                <td class="align-middle small">
+                                    <strong class="text-dark d-block mb-0">{{ finding.signature.rule_name }}</strong>
+                                    <span class="text-muted d-block xsmall">{{ finding.signature.description }}</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted small bg-light">
+                                    <i class="bi bi-shield-check text-success me-1"></i> No configuration vulnerability findings flagged.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+            {% else %}
+                
+                <div class="card border-0 shadow-sm p-5 text-center bg-white my-auto d-flex flex-column align-items-center justify-content-center" style="min-height: 400px;">
+                    <div class="bg-primary-subtle text-primary rounded-circle p-4 mb-4">
+                        <i class="bi bi-shield-lock display-4"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark">ACL Firewall Matrix Engine</h3>
+                    <p class="text-muted text-center mx-auto" style="max-width: 500px;">
+                        Select an existing monitored environment block configuration context from the left sidebar list, or click the upload button above to parse a new file.
+                    </p>
+                </div>
+
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="uploadConfigModal" tabindex="-1" aria-labelledby="uploadConfigModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold" id="uploadConfigModalLabel">
+                    <i class="bi bi-cloud-arrow-up-fill text-info me-2"></i>Upload Cisco Configuration
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="modal-body p-4 bg-white">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary mb-1">Network Group Name</label>
+                        <input type="text" class="form-control" name="network_name" placeholder="e.g. Production Data Center" required>
+                        <div class="form-text xxs">Matching names will append this file to that existing network block automatically.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary mb-1">Network Description</label>
+                        <textarea class="form-control" name="network_description" rows="2" placeholder="Brief infrastructure topology notes..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary mb-1">Device Hostname</label>
+                        <input type="text" class="form-control" name="hostname" placeholder="e.g. Core-Switch-01" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small d-block">Data Payload Ingestion Type</label>
+                        <div class="btn-group w-100" role="group" aria-label="Ingestion Type Option Selectors">
+                            <input type="radio" class="btn-check" name="file_type" id="typeConfig" value="config" checked autocomplete="off">
+                            <label class="btn btn-outline-dark fw-semibold small py-2" for="typeConfig">
+                                <i class="bi bi-gear-fill me-1"></i>Cisco Running Config
+                            </label>
+
+                            <input type="radio" class="btn-check" name="file_type" id="typeCam" value="cam_table" autocomplete="off">
+                            <label class="btn btn-outline-dark fw-semibold small py-2" for="typeCam">
+                                <i class="bi bi-ethernet me-1"></i>CAM Table (show mac address)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-secondary mb-1">Select Configuration Script</label>
+                        <input type="file" class="form-control" name="config_file" accept=".txt,.cfg,.conf" required>
+                    </div>
+                </div>
+                
+                <div class="modal-footer bg-light border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success fw-semibold px-4">
+                        <i class="bi bi-lightning-charge-fill me-1"></i>Process & Parse
+                    </button>
+                </div>
+            </form>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}
+    {% block extra_js %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Find our help tip by its ID element
+            var helpTipEl = document.getElementById('securityHelpTip');
+            
+            // Initialize the Bootstrap Popover instance if the element exists on screen
+            if (helpTipEl) {
+                new bootstrap.Popover(helpTipEl);
+            }
+        });
+    </script>
+    {% endblock %}
