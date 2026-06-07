@@ -1,5 +1,5 @@
 # 1. Pull down the clean codebase from GitHub
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+git clone https://github.com/lktp/Galileo.git
 cd YOUR_REPO_NAME
 
 # 2. Build a fresh virtual environment on the new machine
