@@ -93,6 +93,34 @@ def restore_signature(request, backup_id):
     return render(request, 'characterization/signatures_dashboard.html', context)
 
 
+def bulk_upload_view(request, network_id):
+    if request.method == 'POST':
+        zip_file = request.FILES.get('bulk_zip')
+        network_obj = Network.objects.get(pk=network_id)
+
+        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+            # Extract to a temp path
+            zip_ref.extractall('temp_configs/')
+
+            for filename in os.listdir('temp_configs/'):
+                with open(f'temp_configs/{filename}', 'r') as f:
+                    raw_text = f.read()
+
+                    # Reuse your hostname extraction logic
+                    hostname_match = re.search(r"^hostname\s+(\S+)", raw_text, re.MULTILINE | re.IGNORECASE)
+                    hostname = hostname_match.group(1) if hostname_match else filename
+
+                    # Create/Update record
+                    device_config, _ = DeviceConfig.objects.update_or_create(
+                        network=network_obj, hostname=hostname
+                    )
+
+                    # Call your existing parsers
+                    parse_and_scan_config(raw_text, device_config)
+                    parse_switch_ports_and_cam(raw_text, device_config)
+
+        return redirect('characterization/dashboard.html')
+
 def network_detail_view(request, network_id):
     network_obj = get_object_or_404(Network, pk=network_id)
     
@@ -196,7 +224,7 @@ def network_dashboard_view(request):
             # Route to the correct parser
             if file_type == 'config':
                 parse_and_scan_config(raw_text, device_config)
-                parse_switch_ports_and_cam(raw_text, device_config)
+                parse_switch_ports_and_cam(raw_text, device_config) #this is under topology, not sure if I need this right ow.
             elif file_type == 'cam_table':
                 # Assuming you have a parser for CAM tables
                 parse_switch_ports_and_cam(raw_text, device_config)
@@ -244,21 +272,31 @@ def network_dashboard_view(request):
 
 def network_matrix_view(request, network_id):
     network = get_object_or_404(Network, pk=network_id)
+    # Filter by network
     rules = ACLRule.objects.filter(device_config__network=network)
-    
-    sources = sorted(list(set(rule.source for rule in rules)))
-    destinations = sorted(list(set(rule.destination for rule in rules)))
-    
-    # Build a flat dictionary where keys are "source_ip||dst_ip"
-    matrix_data = {}
+
+    # Filter out anything that isn't a valid IP pattern
+    def is_valid_ip(val):
+        return re.match(r'^(\d{1,3}\.){3}\d{1,3}', val)
+
+    all_endpoints = sorted(list(set(
+        [r.source for r in rules if is_valid_ip(r.source)] +
+        [r.destination for r in rules if is_valid_ip(r.destination)]
+    )))
+
+    # Build a lookup table
+    # Using a nested dict: matrix_data[source][destination] = action
+    matrix_data = {src: {dst: None for dst in all_endpoints} for src in all_endpoints}
+
     for rule in rules:
-        key = f"{rule.source}||{rule.destination}"
-        matrix_data[key] = rule.action.lower()
+        # If the IP exists in our grid, update the action
+        # This will show 'permit' or 'deny' for all resolved combinations
+        if rule.source in matrix_data and rule.destination in matrix_data[rule.source]:
+            matrix_data[rule.source][rule.destination] = rule.action.lower()
 
     context = {
         'network': network,
-        'unique_sources': sources,
-        'unique_destinations': destinations,
+        'endpoints': all_endpoints, # Use one list for both axes
         'matrix_data': matrix_data,
     }
     return render(request, 'characterization/acls.html', context)

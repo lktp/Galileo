@@ -55,16 +55,24 @@ class ArpEntry(models.Model):
         return f"{self.ip_address} -> {self.mac_address}"
 
 class ACLRule(models.Model):
-    # CHANGED: rel_name -> related_name
     device_config = models.ForeignKey(DeviceConfig, on_delete=models.CASCADE, related_name="acl_rules")
     acl_name = models.CharField(max_length=100)
-    action = models.CharField(max_length=10, choices=[('permit', 'Permit'), ('deny', 'Deny')])
+    action = models.CharField(max_length=10) # permit/deny
     protocol = models.CharField(max_length=20)
-    source = models.CharField(max_length=100)       
-    destination = models.CharField(max_length=100)  
+    # These now store the resolved IP or object name
+    source = models.CharField(max_length=255)
+    destination = models.CharField(max_length=255)
     destination_port = models.CharField(max_length=50, blank=True)
 
+class RouterObjects(models.Model):
+    device_config = models.ForeignKey(DeviceConfig, on_delete=models.CASCADE, related_name="router_objects")
+    object_name = models.CharField(max_length=100)
+    object_type = models.CharField(max_length=255, default='Network') # Removed the broken 'choice='
+    contents = models.TextField() # Changed to TextField for longer group lists
+    device_config = models.ForeignKey(DeviceConfig, on_delete=models.CASCADE, related_name="routerObjects")
 
+    def __str__(self):
+        return f"{self.object_name} ({self.object_type})"
 
 
 class SecuritySignature(models.Model):

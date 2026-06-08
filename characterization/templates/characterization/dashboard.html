@@ -216,49 +216,58 @@
             
             <form method="POST" enctype="multipart/form-data">
                 {% csrf_token %}
-                
-                <div class="modal-body p-4 bg-white">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary mb-1">Network Group Name</label>
-                        <input type="text" class="form-control" name="network_name" placeholder="e.g. Production Data Center" required>
-                        <div class="form-text xxs">Matching names will append this file to that existing network block automatically.</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary mb-1">Network Description</label>
-                        <textarea class="form-control" name="network_description" rows="2" placeholder="Brief infrastructure topology notes..."></textarea>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary mb-1">Device Hostname</label>
-                        <input type="text" class="form-control" name="hostname" placeholder="e.g. Core-Switch-01" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary mb-1">Data Payload Ingestion Type</label>
-                        <div class="btn-group w-100" role="group">
-                            <input type="radio" class="btn-check" name="file_type" id="typeConfig" value="config" checked>
-                            <label class="btn btn-outline-dark small py-2" for="typeConfig">Config</label>
 
-                            <input type="radio" class="btn-check" name="file_type" id="typeCam" value="cam_table">
-                            <label class="btn btn-outline-dark small py-2" for="typeCam">CAM Table</label>
-
-                            <input type="radio" class="btn-check" name="file_type" id="typeArp" value="arp_table">
-                            <label class="btn btn-outline-dark small py-2" for="typeArp">ARP Table</label>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-2">
-                        <label class="form-label small fw-bold text-secondary mb-1">Select Configuration Script</label>
-                        <input type="file" class="form-control" name="config_file" accept=".txt,.cfg,.conf" required>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Import Mode:</label>
+                        <select name="import_mode" id="import_mode" class="form-select" onchange="toggleForm()">
+                            <option value="single">Single Device Configuration</option>
+                            <option value="bulk">Bulk Network Archive (ZIP)</option>
+                        </select>
                     </div>
                 </div>
-                
-                <div class="modal-footer bg-light border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-success fw-semibold px-4">
-                        <i class="bi bi-lightning-charge-fill me-1"></i>Process & Parse
-                    </button>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">Network Group Name</label>
+                    <input type="text" class="form-control" name="network_name" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-secondary">Network Description</label>
+                    <textarea class="form-control" name="network_description" rows="2"></textarea>
+                </div>
+
+                <div id="device_specific_fields">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Device Hostname</label>
+                        <input type="text" class="form-control" name="hostname">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Ingestion Type</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="file_type" id="typeConfig" value="config" checked>
+                            <label class="btn btn-outline-dark" for="typeConfig">Config</label>
+                            <input type="radio" class="btn-check" name="file_type" id="typeCam" value="cam_table">
+                            <label class="btn btn-outline-dark" for="typeCam">CAM</label>
+                            <input type="radio" class="btn-check" name="file_type" id="typeArp" value="arp_table">
+                            <label class="btn btn-outline-dark" for="typeArp">ARP</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-secondary">Configuration File(s)</label>
+                    <div id="single_file_box">
+                        <input type="file" name="config_file" class="form-control" accept=".txt,.cfg">
+                    </div>
+                    <div id="bulk_file_box" style="display: none;">
+                        <input type="file" name="bulk_zip" class="form-control" accept=".zip">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Process & Parse</button>
                 </div>
             </form>
             
@@ -268,6 +277,22 @@
 {% endblock %}
     {% block extra_js %}
     <script>
+        function toggleForm() {
+            const mode = document.getElementById('import_mode').value;
+            const deviceFields = document.getElementById('device_specific_fields');
+            const singleFile = document.getElementById('single_file_box');
+            const bulkFile = document.getElementById('bulk_file_box');
+
+            if (mode === 'bulk') {
+                deviceFields.style.display = 'none';
+                singleFile.style.display = 'none';
+                bulkFile.style.display = 'block';
+            } else {
+                deviceFields.style.display = 'block';
+                singleFile.style.display = 'block';
+                bulkFile.style.display = 'none';
+            }
+        }
         document.addEventListener('DOMContentLoaded', function () {
             // Find our help tip by its ID element
             var helpTipEl = document.getElementById('securityHelpTip');
