@@ -13,3 +13,11 @@ pip install -r requirements.txt
 python manage.py makemigrations
 python manage.py migrate
 python manage.py runserver
+
+Things to do:
+
+1. Fix the mapping function
+2. Add ability to use other routers
+3. Add ability to bring more host data in.
+4. Create rules section that will allow you to create static rules.
+
