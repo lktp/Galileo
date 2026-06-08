@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'characterization',
     'hosts',
     'topology',
+    'sys_control',
 ]
 
 MIDDLEWARE = [

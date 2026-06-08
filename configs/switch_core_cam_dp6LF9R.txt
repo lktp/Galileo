@@ -1,0 +1,9 @@
+
+
+Vlan    Mac Address       Type        Ports
+----    -----------       --------    -----
+  10    000c.291a.0b11    DYNAMIC     Gi1/0/1    (10.100.10.11 - exec-pc-01)
+  10    000c.291a.0b22    DYNAMIC     Gi1/0/2    (10.100.10.22 - eng-workstation-02)
+  10    000c.291a.0b33    DYNAMIC     Gi1/0/3    (10.100.10.33 - office-printer)
+  10    0050.56af.0100    DYNAMIC     Gi1/0/10   (10.100.10.100 - dhcp-pool-stray)
+  10    000c.291a.0b01    DYNAMIC     Gi1/0/24   (10.100.10.1 - router-core-alpha)

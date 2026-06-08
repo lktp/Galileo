@@ -1,6 +1,8 @@
 # characterization/utils.py
 import re
-from .models import SecuritySignature, SecurityFinding, ACLRule  # Verify ACLRule is imported here!
+from .models import SecuritySignature, SecurityFinding, ACLRule, ArpEntry 
+from .models import ArpEntry
+
 
 def parse_and_scan_config(raw_text, device_config):
     lines = raw_text.splitlines()
@@ -103,3 +105,38 @@ def parse_and_scan_config(raw_text, device_config):
                     signature=sig,
                     matched_text=matched_string.strip()
                 )
+
+
+
+def normalize_mac(mac):
+    # Remove dots and colons, then re-format with colons
+    clean = re.sub(r'[\.\:]', '', mac)
+    return ':'.join(clean[i:i+2] for i in range(0, 12, 2))
+
+def parse_cisco_arp(raw_text, device_config):
+    """
+    Parses Cisco 'show arp' output:
+    Protocol  Address          Age (min)  Hardware Addr   Type   Interface
+    Internet  10.100.10.1      -          000c.291a.0b01  ARPA   Vlan10
+    """
+    # Regex to capture IP and MAC. 
+    # Matches: (IP Address) followed by whitespace, (MAC Address)
+    arp_pattern = re.compile(r"Internet\s+([0-9.]+)\s+\S+\s+([0-9a-fA-F\.]+)\s+ARPA")
+    
+    lines = raw_text.splitlines()
+    parsed_count = 0
+    
+    for line in lines:
+        match = arp_pattern.search(line.strip())
+        if match:
+            ip, mac = match.groups()
+            mac = normalize_mac(mac)
+            # Use update_or_create to handle re-scans automatically
+            ArpEntry.objects.update_or_create(
+                ip_address=ip,
+                gathered_from=device_config,
+                defaults={'mac_address': mac}
+            )
+            parsed_count += 1
+            
+    print(f"[+] Parsed {parsed_count} ARP entries for {device_config.hostname}")

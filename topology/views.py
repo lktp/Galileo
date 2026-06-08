@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from characterization.models import DeviceConfig, Network
+from characterization.models import DeviceConfig, Network, Subnet
 from .models import PortAttachment
-from hosts.models import Host
+from hosts.models import Host, OpenPort
 
 def topology_dashboard_view(request):
     networks = Network.objects.all().order_by('-created_at')
@@ -14,6 +14,13 @@ def topology_dashboard_view(request):
     })
 
 def topology_network_graph_json(request):
+    network_id = request.GET.get('network_filter')
+    # DEBUG: See if we are even receiving a network_id
+    print(f"DEBUG: Received network_id: {network_id}")
+    
+    # Check if the query itself is empty
+    subnets = Subnet.objects.filter(network_id=network_id)
+    print(f"DEBUG: Found {subnets.count()} subnets for this ID.")
     """
     API Endpoint that dynamically maps network infrastructure switches and 
     their host endpoint connections.
@@ -135,7 +142,23 @@ def topology_network_graph_json(request):
                         'dasharray': [5, 5] # Generates a dashed line style to indicate a derived/trunk path
                     })
                     links_drawn.add(dev_pair)
+    print(f"DEBUG: Preparing to return. Nodes: {len(nodes)}, Edges: {len(edges)}")
     return JsonResponse({'nodes': nodes, 'edges': edges})
+
+def get_scan_info(request, device_id):
+    try:
+
+        ports = OpenPort.objects.filter(host_id=device_id).values_list('port_number', flat=True).distinct()
+        
+        # Convert QuerySet to list
+        port_list = list(ports)
+        
+        return JsonResponse({'ports': port_list})
+    
+    except Exception as e:
+        # This will catch and print the error to your console
+        print(f"DEBUG ERROR: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
 
 def host_reachability_matrix(request, host_id):
     """

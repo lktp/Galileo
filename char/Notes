@@ -10,3 +10,17 @@ What I am going to do on sunday:
         1a. Maps each router/switch based on the config
         1b. Can add nmap / pingsweeps and will help map that.
     2. Make a form for updating signatures
+
+
+
+7 June 26
+OK so i fucked a bhnch of stuff up so went back to the 5 June commit.
+
+Currently the ACL stuff is working.
+The map is jacked right now, working o nfixing that.
+The signatures is up and running.
+I am currently working on an arp architecture that will drie the network map.
+ -- Ok I have a quick control panel, more will be added later. 
+ -- Ok the mac/ip script didnt work, i *think* its because the arp data wasnt fully there.  Gonna look at that tomorrow.
+ Still need to get rid of the extra ghost hosts.
+ 

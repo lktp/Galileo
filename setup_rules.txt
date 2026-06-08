@@ -1,0 +1,45 @@
+signatures = [
+    {
+        "rule_name": "TELNET_ENABLED",
+        "pattern": r"^line vty \d+ \d+[\s\S]*?transport input (all|telnet)",
+        "severity": "High",
+        "description": "Telnet detected on VTY lines. This protocol sends credentials in cleartext."
+    },
+    {
+        "rule_name": "PASSWORD_CLEARTEXT",
+        "pattern": r"^enable password \S+",
+        "severity": "High",
+        "description": "Unencrypted enable password detected. Use 'enable secret' for hashed passwords."
+    },
+    {
+        "rule_name": "SNMP_DEFAULT_COMMUNITY",
+        "pattern": r"^snmp-server community (public|private) RO",
+        "severity": "Medium",
+        "description": "Default SNMP community strings ('public'/'private') detected. These are easily brute-forced."
+    },
+    {
+        "rule_name": "PERMIT_ANY_ANY",
+        "pattern": r"access-list \d+ permit ip any any",
+        "severity": "Medium",
+        "description": "Overly permissive 'permit ip any any' rule detected. This bypasses security segmentation."
+    },
+    {
+        "rule_name": "HTTP_SERVER_ENABLED",
+        "pattern": r"^ip http server$",
+        "severity": "Medium",
+        "description": "Unencrypted HTTP management interface enabled. Use 'ip http secure-server' (HTTPS) instead."
+    }
+]
+
+# Insert/Update them into the database
+for sig in signatures:
+    SecuritySignature.objects.update_or_create(
+        rule_name=sig['rule_name'],
+        defaults={
+            "pattern": sig['pattern'],
+            "severity": sig['severity'],
+            "description": sig['description'],
+            "is_active": True
+        }
+    )
+print("[+] Security signatures successfully populated.")

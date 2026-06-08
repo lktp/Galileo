@@ -38,128 +38,121 @@
     </div>
 </div>
 
+<div class="modal fade" id="portScanModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Port Scan Results</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="scan-modal-body">
+        <p>Loading scan data...</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script type="text/javascript">
 window.onload = function() {
     const canvasContainer = document.getElementById('network-topology-canvas');
     const loader = document.getElementById('map-loader');
     
+    // Global variable for the network instance
+    let networkGraph;
+    let originalNodes = null;
+
     if (typeof vis === 'undefined') {
         console.error("Vis.js failed to load.");
-        canvasContainer.innerHTML = `<div class="alert alert-danger m-3">External Mapping Library (Vis.js) failed to load.</div>`;
         return;
     }
 
     const activeFilter = "{{ active_filter_id }}";
     let apiUrl = "/topology/network-graph-json/";
-    if (activeFilter) {
-        apiUrl += `?network_filter=${activeFilter}`;
+    if (activeFilter) apiUrl += `?network_filter=${activeFilter}`;
+
+    // Helper function for Port Scans - placed globally in scope
+    function fetchPortScanData(fullId, id) {
+        console.log("DEBUG: Attempting to fetch scan for:", id);
+        const modalBody = document.getElementById('scan-modal-body');
+        const modalElement = document.getElementById('portScanModal');
+        
+        if (!modalElement) {
+            console.error("Modal element not found in HTML!");
+            return;
+        }
+
+        const scanModal = new bootstrap.Modal(modalElement);
+        modalBody.innerHTML = "Fetching scan data...";
+        scanModal.show();
+        
+        fetch(`/api/scan-info/${id}/`)
+            .then(res => res.json())
+            .then(data => {
+                modalBody.innerHTML = data.ports?.length > 0 
+                    ? `<ul class="list-group">${data.ports.map(p => `<li class="list-group-item">Port: ${p}</li>`).join('')}</ul>`
+                    : "<p>No open ports detected.</p>";
+            })
+            .catch(() => modalBody.innerHTML = "<p class='text-danger'>Error loading data.</p>");
     }
 
     fetch(apiUrl)
         .then(response => response.json())
         .then(data => {
             if (loader) loader.style.display = 'none';
-
             if (!data.nodes || data.nodes.length === 0) {
-                canvasContainer.innerHTML = `
-                    <div class="text-center p-5">
-                        <h4 class="text-warning">⚠️ No Map Assets Generated</h4>
-                        <p class="text-muted">The backend JSON array returned empty.</p>
-                    </div>`;
+                canvasContainer.innerHTML = `<div class="text-center p-5"><h4>⚠️ No Map Assets</h4></div>`;
                 return;
             }
 
-            // FIX 1: We use 'nodes' as our dataset reference variable
             const nodes = new vis.DataSet(data.nodes);
             const edges = new vis.DataSet(data.edges);
             const graphData = { nodes: nodes, edges: edges };
 
             const options = {
-                nodes: {
-                    shape: 'dot',
-                    size: 24,
-                    font: { size: 14, color: '#212529', face: 'monospace' },
-                    borderWidth: 2
-                },
-                edges: {
-                    width: 2,
-                    font: { size: 11, align: 'top' },
-                    smooth: { type: 'continuous' }
-                },
+                nodes: { shape: 'dot', size: 24, font: { face: 'monospace' } },
                 groups: {
-                    switch: { color: { background: '#0d6efd', border: '#0a58ca' }, shape: 'square' },
-                    endpoint: { color: { background: '#198754', border: '#146c43' }, shape: 'dot' }
-                },
-                physics: {
-                    barnesHut: { gravitationalConstant: -3000, centralGravity: 0.3, springLength: 150 },
-                    stabilization: { iterations: 150 }
+                    switch: { color: { background: '#0d6efd' }, shape: 'square' },
+                    endpoint: { color: { background: '#198754' }, shape: 'dot' }
                 }
             };
 
-            // FIX 2: Establish the reference mapping instance name matching your event handlers
-            const networkGraph = new vis.Network(canvasContainer, graphData, options);
-            let originalNodes = null;
+            networkGraph = new vis.Network(canvasContainer, graphData, options);
 
-            // Handle Node Selection Events
+            // RIGHT-CLICK: Direct Event Listener on Canvas
+            canvasContainer.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                const nodeID = networkGraph.getNodeAt({x: e.offsetX, y: e.offsetY});
+                if (nodeID) {
+                    const cleanId = nodeID.split('_')[1];
+                    fetchPortScanData(nodeID, cleanId);
+                }
+            });
+
+            // LEFT-CLICK: Reachability
             networkGraph.on("selectNode", function (params) {
                 const selectedId = params.nodes[0];
-                
-                if (!selectedId.startsWith("host_")) {
-                    return; 
-                }
+                if (!selectedId.startsWith("host_")) return;
 
                 const dbHostId = selectedId.split("_")[1];
-                console.log(`Evaluating reachability paths from source host ID: ${dbHostId}`);
-
-                if (!originalNodes) {
-                    originalNodes = JSON.parse(JSON.stringify(data.nodes));
-                }
+                if (!originalNodes) originalNodes = JSON.parse(JSON.stringify(data.nodes));
 
                 fetch(`/topology/api/reachability/${dbHostId}/`)
-                    .then(response => response.json())
+                    .then(res => res.json())
                     .then(matrix => {
                         const updatedNodes = data.nodes.map(node => {
-                            // Highlight selected node turquoise
-                            if (node.id === matrix.source_id) {
-                                return { 
-                                    ...node, 
-                                    color: { background: '#0dcaf0', border: '#0aa2c0' },
-                                    chosen: false // Overrides Vis.js blue hover overlay forcing our color
-                                };
-                            }
-                            
-                            // Turn blocked nodes Red
-                            if (matrix.blocked.includes(node.id)) {
-                                return { 
-                                    ...node, 
-                                    color: { background: '#dc3545', border: '#b02a37' },
-                                    chosen: false,
-                                    title: node.title + "<br><b style='color:#dc3545;'>⚠️ ACL BLOCKED CHANNEL</b>"
-                                };
-                            }
-                            
-                            // Keep allowed peers green
+                            if (node.id === matrix.source_id) return { ...node, color: { background: '#0dcaf0' }, chosen: false };
+                            if (matrix.blocked.includes(node.id)) return { ...node, color: { background: '#dc3545' }, chosen: false };
                             return { ...node, chosen: false };
                         });
-
-                        // FIX 3: Update our defined dataset target variable
                         nodes.update(updatedNodes);
                     });
             });
 
-            // Reset mapping styles back to green/blue base baseline monitor rules
-            networkGraph.on("deselectNode", function (params) {
-                if (originalNodes) {
-                    console.log("Resetting network map to baseline monitoring colors...");
-                    nodes.update(originalNodes);
-                }
+            networkGraph.on("deselectNode", function () {
+                if (originalNodes) nodes.update(originalNodes);
             });
         })
-        .catch(error => {
-            console.error("Critical Mapping Error:", error);
-            if (loader) loader.style.display = 'none';
-        });
+        .catch(err => console.error("Mapping Error:", err));
 };
 </script>
 {% endblock %}

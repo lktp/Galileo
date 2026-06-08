@@ -235,17 +235,16 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small d-block">Data Payload Ingestion Type</label>
-                        <div class="btn-group w-100" role="group" aria-label="Ingestion Type Option Selectors">
-                            <input type="radio" class="btn-check" name="file_type" id="typeConfig" value="config" checked autocomplete="off">
-                            <label class="btn btn-outline-dark fw-semibold small py-2" for="typeConfig">
-                                <i class="bi bi-gear-fill me-1"></i>Cisco Running Config
-                            </label>
+                        <label class="form-label small fw-bold text-secondary mb-1">Data Payload Ingestion Type</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="file_type" id="typeConfig" value="config" checked>
+                            <label class="btn btn-outline-dark small py-2" for="typeConfig">Config</label>
 
-                            <input type="radio" class="btn-check" name="file_type" id="typeCam" value="cam_table" autocomplete="off">
-                            <label class="btn btn-outline-dark fw-semibold small py-2" for="typeCam">
-                                <i class="bi bi-ethernet me-1"></i>CAM Table (show mac address)
-                            </label>
+                            <input type="radio" class="btn-check" name="file_type" id="typeCam" value="cam_table">
+                            <label class="btn btn-outline-dark small py-2" for="typeCam">CAM Table</label>
+
+                            <input type="radio" class="btn-check" name="file_type" id="typeArp" value="arp_table">
+                            <label class="btn btn-outline-dark small py-2" for="typeArp">ARP Table</label>
                         </div>
                     </div>
                     

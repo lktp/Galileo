@@ -9,12 +9,50 @@ class Network(models.Model):
     def __str__(self):
         return self.name
 
+class Subnet(models.Model):
+    # This creates the key relationship (ForeignKey)
+    # on_delete=models.CASCADE ensures if a Network is deleted, 
+    # its subnets are removed too.
+    network = models.ForeignKey(
+        Network, 
+        on_delete=models.CASCADE, 
+        related_name='subnets'
+    )
+    cidr_block = models.CharField(max_length=50) # e.g., '10.0.0.0/24'
+    name = models.CharField(max_length=100, blank=True) # e.g., 'Internal_Users'
+
+    class Meta:
+            # Ensures you don't accidentally add the same CIDR 
+            # to the same network twice
+            unique_together = ('network', 'cidr_block')
+
+
+
 class DeviceConfig(models.Model):
     # CHANGED: rel_name -> related_name
     network = models.ForeignKey(Network, on_delete=models.CASCADE, related_name="configs")
     hostname = models.CharField(max_length=100, blank=True)
     config_file = models.FileField(upload_to='configs/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+
+class ArpEntry(models.Model):
+    # Use 17 for standard MAC (00:00:00:00:00:00)
+    mac_address = models.CharField(max_length=17) 
+    # Use 15 for standard IPv4 (255.255.255.255)
+    ip_address = models.GenericIPAddressField() 
+    
+    gathered_from = models.ForeignKey(
+        DeviceConfig,
+        on_delete=models.CASCADE,
+        related_name='arp_entries' # This makes more sense!
+    )
+
+    class Meta:
+        # Ensures you don't have multiple entries for the same IP on one device
+        unique_together = ('ip_address', 'gathered_from')
+
+    def __str__(self):
+        return f"{self.ip_address} -> {self.mac_address}"
 
 class ACLRule(models.Model):
     # CHANGED: rel_name -> related_name
@@ -41,7 +79,6 @@ class SecuritySignature(models.Model):
     severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES, default='Medium')
     description = models.TextField(help_text="Detailed context shown to the user on findings.")
     is_active = models.BooleanField(default=True, help_text="Easily toggle this signature rule on/off.")
-
     def __str__(self):
         return f"{self.rule_name} ({self.severity})"
 

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nmaprun scanner="nmap" args="nmap -sV -oX scan_results.xml 10.0.0.1-7">
+  <host>
+    <address addr="10.0.0.1" addrtype="ipv4"/>
+    <hostnames><hostname name="gateway-core" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="22"><state state="open"/><service name="ssh" product="OpenSSH" version="9.0"/></port>
+      <port protocol="tcp" portid="80"><state state="open"/><service name="http" product="nginx" version="1.18"/></port>
+    </ports>
+  </host>
+  <host>
+    <address addr="10.0.0.2" addrtype="ipv4"/>
+    <hostnames><hostname name="db-server" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="5432"><state state="open"/><service name="postgresql" product="PostgreSQL" version="14.2"/></port>
+    </ports>
+  </host>
+  <host>
+    <address addr="10.0.0.3" addrtype="ipv4"/>
+    <hostnames><hostname name="web-prod-01" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="443"><state state="open"/><service name="http" product="Apache httpd" version="2.4.5"/></port>
+    </ports>
+  </host>
+  <host>
+    <address addr="10.0.0.4" addrtype="ipv4"/>
+    <hostnames><hostname name="internal-dns" type="user"/></hostnames>
+    <ports>
+      <port protocol="udp" portid="53"><state state="open"/><service name="domain" product="ISC BIND" version="9.16"/></port>
+    </ports>
+  </host>
+  <host>
+    <address addr="10.0.0.5" addrtype="ipv4"/>
+    <hostnames><hostname name="storage-nas" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="445"><state state="open"/><service name="microsoft-ds" product="Samba" version="4.15"/></port>
+    </ports>
+  </host>
+  <host>
+    <address addr="10.0.0.6" addrtype="ipv4"/>
+    <hostnames><hostname name="dev-workstation" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="3389"><state state="open"/><service name="ms-wbt-server" product="Microsoft Terminal Services" version=""/></port>
+    </ports>
+  </host>
+  <host>
+    <address addr="10.0.0.7" addrtype="ipv4"/>
+    <hostnames><hostname name="security-monitor" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="9000"><state state="open"/><service name="http" product="Elasticsearch" version="8.2"/></port>
+    </ports>
+  </host>
+</nmaprun>

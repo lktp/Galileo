@@ -3,6 +3,7 @@ from .models import Network, ACLRule, DeviceConfig, SecurityFinding, SignatureBa
 from .utils import parse_and_scan_config
 from django.urls import reverse
 from topology.utils import parse_switch_ports_and_cam
+from .utils import parse_cisco_arp
 
 def toggle_signature_active(request, sig_id):
     """Enables or disables a scanning rule globally."""
@@ -171,30 +172,40 @@ def network_dashboard_view(request):
         uploaded_file = request.FILES.get('config_file')
         hostname = request.POST.get('hostname', 'Unknown-Device')
 
+        file_type = request.POST.get('file_type') # Capture the radio button value
+
         if network_name and uploaded_file:
             network, _ = Network.objects.get_or_create(
                 name=network_name,
                 defaults={'description': network_desc}
             )
-            
+
             device_config = DeviceConfig.objects.create(
-                network=network,
+                network=network, # Pass the object instance here, not the name string
                 hostname=hostname,
                 config_file=uploaded_file
             )
-
-           
-            uploaded_file.seek(0) 
-
-            try:
-                raw_bytes = uploaded_file.read()
-                raw_text = raw_bytes.decode('utf-8-sig')
-            except UnicodeDecodeError:
-                raw_text = raw_bytes.decode('latin-1')
+            # 2. Reset the file pointer to the beginning for the parser
+            # This ensures that when the parsers read the file, they start from byte 0
+            uploaded_file.seek(0)
             
-            # Now raw_text will contain your actual configuration payload!
-            parse_and_scan_config(raw_text, device_config)
-            parse_switch_ports_and_cam(raw_text, device_config)
+            # Read the file content
+            uploaded_file.seek(0)
+            raw_text = uploaded_file.read().decode('utf-8-sig', errors='replace')
+
+            # Route to the correct parser
+            if file_type == 'config':
+                parse_and_scan_config(raw_text, device_config)
+                parse_switch_ports_and_cam(raw_text, device_config)
+            elif file_type == 'cam_table':
+                # Assuming you have a parser for CAM tables
+                parse_switch_ports_and_cam(raw_text, device_config)
+            elif file_type == 'arp_table':
+                # Call the new ARP parser
+                parse_cisco_arp(raw_text, device_config)
+                # OPTIONAL: Run your reconciliation logic here
+                # reconcile_network_data() 
+            
             return redirect(f"/network/?network_id={network.id}")
     # --- RETRIEVE METRICS (GET) ---
     networks = Network.objects.all().order_by('-created_at')

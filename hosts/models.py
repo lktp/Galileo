@@ -15,7 +15,8 @@ class Host(models.Model):
     hostname = models.CharField(max_length=255, blank=True, null=True)
     os_name = models.CharField(max_length=100, blank=True, null=True)
     last_seen = models.DateTimeField(auto_now=True)
-
+    mac_address = models.CharField(max_length=17, blank=True, null=True, unique=True)
+    
     def __str__(self):
         return self.hostname or self.ip_address
 

@@ -3,6 +3,8 @@ from django.shortcuts import render, redirect,  get_object_or_404
 from .models import Host
 from .utils import parse_nmap_xml
 from characterization.models import Network # Import Network to pull options list
+from django.db.models import Q
+from django.db.models import Count
 
 def hosts_dashboard_view(request):
     if request.method == 'POST':
@@ -35,7 +37,8 @@ def hosts_dashboard_view(request):
     elif active_filter_id:
         host_query = host_query.filter(network_id=active_filter_id)
 
-    hosts = host_query.order_by('ip_address')
+    #hosts = host_query.order_by('ip_address')
+    hosts = Host.objects.annotate(num_ports=Count('open_ports'))
     networks = Network.objects.all().order_by('-created_at')
     
     context = {

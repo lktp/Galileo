@@ -22,5 +22,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('characterization.urls')),
     path('hosts/', include('hosts.urls', namespace='hosts')),
-    path('topology/', include('topology.urls')),
+    path('', include('topology.urls')),
+    path('', include('sys_control.urls')),
 ]

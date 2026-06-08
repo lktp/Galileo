@@ -1,0 +1,10 @@
+
+
+Vlan    Mac Address       Type        Ports
+----    -----------       --------    -----
+  20    0050.56af.0011    DYNAMIC     Gi1/0/1    (10.100.20.11 - hq-dc-01)
+  20    0050.56af.0022    DYNAMIC     Gi1/0/2    (10.100.20.22 - scada-historian-db)
+  20    0050.56af.0033    DYNAMIC     Gi1/0/3    (10.100.20.33 - nas-backup-vault)
+  20    0050.56af.0044    DYNAMIC     Gi1/0/4    (10.100.20.44 - hmi-operator-panel)
+  20    0050.56af.0001    DYNAMIC     Gi1/0/24   (10.100.20.1 - router-branch-beta)
+
