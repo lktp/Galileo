@@ -109,7 +109,31 @@ window.onload = function() {
             const graphData = { nodes: nodes, edges: edges };
 
             const options = {
-                nodes: { shape: 'dot', size: 24, font: { face: 'monospace' } },
+                // 1. Use a faster solver for larger datasets
+                physics: {
+                    solver: 'forceAtlas2Based',
+                    forceAtlas2Based: {
+                        gravitationalConstant: -5000,
+                        centralGravity: 0.01,
+                        springConstant: 0.08,
+                        springLength: 100,
+                        damping: 0.4,
+                        avoidOverlap: 1 // High value prevents bunching
+                    },
+                    // 2. Limit the stabilization effort
+                    stabilization: {
+                        enabled: true,
+                        iterations: 100, // Stop calculating after 100 iterations
+                        updateInterval: 25,
+                        onlyDynamicEdges: false,
+                        fit: true
+                    }
+                },
+                nodes: {
+                    shape: 'dot',
+                    size: 24,
+                    font: { face: 'monospace' }
+                },
                 groups: {
                     switch: { color: { background: '#0d6efd' }, shape: 'square' },
                     endpoint: { color: { background: '#198754' }, shape: 'dot' }
