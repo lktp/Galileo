@@ -60,13 +60,13 @@ def extract_segment(p):
         # Check for object-group
         if parts[p] == "object-group":
             if p + 1 < len(parts):
-                return f"object-group {parts[p+1]}", p + 2
+                return f"{parts[p+1]}", p + 2
             return "object-group (incomplete)", p + 1
             
         # Check for host
         if parts[p] == "host":
             if p + 1 < len(parts):
-                return f"host {parts[p+1]}", p + 2
+                return f"{parts[p+1]}", p + 2
             return "host (incomplete)", p + 1
             
         # Standard IP + Mask
@@ -102,6 +102,8 @@ def save_objects_to_db(objects_json, device_config_instance):
             
     NetworkObject.objects.bulk_create(objects_to_create)
 
+
+
 #dedicated object parser
 def parse_object_json(raw_text):
     data = {}
@@ -126,6 +128,7 @@ def parse_object_json(raw_text):
             else:
                 current_context = None # Stop capturing
                 
+    print(data)
     # ... rest of the processing logic (ports/addresses) stays the same
     final_objs = []
     for name, content in data.items():
@@ -183,7 +186,10 @@ def parse_interface_json(raw_text):
             final_ints.append({"name": name, "address": []})
     return final_ints
 
-def save_json_to_db(json_data, device_config_instance):
+
+#The below functions serve to do stuff for the ACLs.
+
+def save_json_to_db_acls(json_data, device_config_instance):
     acl_rules_to_create = []
     
     for acl_group in json_data:
@@ -208,10 +214,25 @@ def save_json_to_db(json_data, device_config_instance):
 
 def parse_acl_line(parts):
     # Default values
+    # access-list CSM_FW_ACL_ advanced permit tcp ifc NAV-DMZ object-group GRP-HST-NAV-HOSTS host 169.55.82.21 eq https rule-id 268436502
+
+    if "advanced" in parts[0] or "extended" in parts[0]:
+        del parts[0]
+
+    if "ifc" in parts:
+        idx = parts.index("ifc")
+
+        # 2. Remove the current item and the one after it
+        # We remove index (idx + 1) first to avoid shifting issues,
+        # then remove idx.
+        parts.pop(idx + 1) # Removes the item AFTER 'advanced'
+        parts.pop(idx)
+
     rule = {"action": parts[0], "protocol": "", "source": "any", "destination": "any", "service": "any"}
-    
+
+
     # 1. Protocol Detection
-    proto_list = ["tcp", "udp", "icmp", "ip"]
+    proto_list = ["tcp", "udp", "icmp", "ip", "gre", "ipinip"]
     ptr = 1 # Start pointer at index 1 (right after action)
     
     if len(parts) > 1 and parts[1].lower() in proto_list:
@@ -232,7 +253,7 @@ def parse_acl_line(parts):
         # Check for host (requires 2 parts: keyword + ip)
         if parts[p] == "host":
             if p + 1 < len(parts):
-                return f"host {parts[p+1]}", p + 2
+                return f"{parts[p+1]}", p + 2
             return "host (incomplete)", p + 1
             
         # Standard IP + Mask
@@ -243,14 +264,20 @@ def parse_acl_line(parts):
                 return "0.0.0.0", p+1
         return f"{parts[p]}", p + 1
 
-    # 3. Parse Source and Destination
-    rule["source"], ptr = extract_segment(ptr)
-    rule["destination"], ptr = extract_segment(ptr)
-    
     # 4. Remaining is service
     if ptr < len(parts):
         rule["service"] = " ".join(parts[ptr:])
-        
+    elif "range" in parts:
+        idx = parts.index("range")
+        parts.pop(idx)
+        rule["service"] = f"{parts[idx-1]} - {parts[idx]}"
+
+
+    # 3. Parse Source and Destination
+    rule["source"], ptr = extract_segment(ptr)
+    rule["destination"], ptr = extract_segment(ptr)
+
+
     return rule
 
 #  Dedicated ACL Parser
@@ -265,7 +292,7 @@ def parse_to_ACL_json(raw_text):
             data[current_name] = []
         elif line.startswith(("permit", "deny")) and current_name:
             data[current_name].append(parse_acl_line(line.split()))
-        elif line.startswith("access-list"):
+        elif line.startswith("access-list") and not "remark" in line:
             parts = line.split()
             name = parts[1]
             if name not in data: data[name] = []
@@ -312,16 +339,15 @@ def parse_and_scan_config(raw_text, device_config):
     INTERFACE_JSON=parse_interface_json(raw_text)
 
     lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
-    print(f"Object Json: {OBJECTS_JSON}")
-    print(f"ACL Json: {ACL_JSON}")
-    print(f"Interface Json: {INTERFACE_JSON}")   
+    #print(f"Object Json: {OBJECTS_JSON}")
+    #print(f"Interface Json: {INTERFACE_JSON}")
     # Main Parsing Loop
     
     save_objects_to_db(OBJECTS_JSON, device_config)
-    resolve_acl_json(ACL_JSON, device_config)
-    print (ACL_JSON)
-    save_json_to_db(ACL_JSON, device_config)
 
+    resolve_acl_json(ACL_JSON, device_config)
+    #print (ACL_JSON)
+    save_json_to_db_acls(ACL_JSON, device_config)
 
 
     # 3. Security Scan
