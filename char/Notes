@@ -24,3 +24,13 @@ I am currently working on an arp architecture that will drie the network map.
  -- Ok the mac/ip script didnt work, i *think* its because the arp data wasnt fully there.  Gonna look at that tomorrow.
  Still need to get rid of the extra ghost hosts.
  
+8 June 26
+ 1. Ok. I completly changed the way that my shit works.  Its totally different. But it should be better.
+ 2. I chnaged the parsing to a JSON parsing, that then goes into the database.
+ 3. I did not get to the map today because of this. But I think this will work for most use cases.
+ 4. Now I gotta take the interfaces and get them into the map.'
+
+ For tomorrow:
+ 1. Start getting the interfaces of the routers from the JSON into the database.
+ 2. Get the logic set up for the cam tables, and the arp to connect ot the hosts.
+ 3. Remake the rules sections.

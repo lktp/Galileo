@@ -8,7 +8,13 @@ class Network(models.Model):
 
     def __str__(self):
         return self.name
-
+class DeviceConfig(models.Model):
+    # CHANGED: rel_name -> related_name
+    network = models.ForeignKey(Network, on_delete=models.CASCADE, related_name="configs")
+    hostname = models.CharField(max_length=100, blank=True)
+    config_file = models.FileField(upload_to='configs/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
 class Subnet(models.Model):
     # This creates the key relationship (ForeignKey)
     # on_delete=models.CASCADE ensures if a Network is deleted, 
@@ -26,14 +32,14 @@ class Subnet(models.Model):
             # to the same network twice
             unique_together = ('network', 'cidr_block')
 
+class NetworkObject(models.Model):
+    device_config = models.ForeignKey(DeviceConfig, on_delete=models.CASCADE)
+    group_name = models.CharField(max_length=100)
+    # Store either a port number OR an IP/Subnet string
+    member_type = models.CharField(max_length=20) # 'port' or 'address'
+    value = models.CharField(max_length=100)
 
 
-class DeviceConfig(models.Model):
-    # CHANGED: rel_name -> related_name
-    network = models.ForeignKey(Network, on_delete=models.CASCADE, related_name="configs")
-    hostname = models.CharField(max_length=100, blank=True)
-    config_file = models.FileField(upload_to='configs/')
-    uploaded_at = models.DateTimeField(auto_now_add=True)
 
 class ArpEntry(models.Model):
     # Use 17 for standard MAC (00:00:00:00:00:00)

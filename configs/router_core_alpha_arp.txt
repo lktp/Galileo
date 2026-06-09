@@ -1,7 +1,0 @@
-router_core_alpha# show arp
-Protocol  Address          Age (min)  Hardware Addr   Type   Interface
-Internet  10.100.10.1      -          000c.291a.0b01  ARPA   Vlan10
-Internet  10.100.10.11     15         000c.291a.0b11  ARPA   Vlan10
-Internet  10.100.10.22     20         000c.291a.0b22  ARPA   Vlan10
-Internet  10.100.10.33     5          000c.291a.0b33  ARPA   Vlan10
-Internet  10.100.10.100    12         0050.56af.0100  ARPA   Vlan10
