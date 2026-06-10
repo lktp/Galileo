@@ -8,12 +8,30 @@ class Network(models.Model):
 
     def __str__(self):
         return self.name
+
 class DeviceConfig(models.Model):
     # CHANGED: rel_name -> related_name
     network = models.ForeignKey(Network, on_delete=models.CASCADE, related_name="configs")
     hostname = models.CharField(max_length=100, blank=True)
     config_file = models.FileField(upload_to='configs/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
+
+class InfrastructureLink(models.Model):
+    # The source (Local)
+    source_device = models.ForeignKey(DeviceConfig, on_delete=models.CASCADE, related_name='uplinks')
+    source_interface = models.CharField(max_length=100)
+
+    # The target (Remote/Neighbor)
+    target_device = models.ForeignKey(DeviceConfig, on_delete=models.SET_NULL, null=True, related_name='downlinks')
+    target_interface = models.CharField(max_length=100, blank=True)
+
+    # Metadata for the link
+    vlan_list = models.CharField(max_length=255, blank=True)
+    last_discovered = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        # Prevents duplicate links for the same interface
+        unique_together = ('source_device', 'source_interface')
     
 class Subnet(models.Model):
     # This creates the key relationship (ForeignKey)

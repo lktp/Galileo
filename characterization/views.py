@@ -3,7 +3,7 @@ from .models import Network, ACLRule, DeviceConfig, SecurityFinding, SignatureBa
 from .utils import parse_and_scan_config
 from django.urls import reverse
 from topology.utils import parse_switch_ports_and_cam
-from .utils import parse_cisco_arp
+from .utils import parse_cisco_arp, process_lldp_data
 
 def toggle_signature_active(request, sig_id):
     """Enables or disables a scanning rule globally."""
@@ -226,13 +226,12 @@ def network_dashboard_view(request):
                 parse_and_scan_config(raw_text, device_config)
                 parse_switch_ports_and_cam(raw_text, device_config) #this is under topology, not sure if I need this right ow.
             elif file_type == 'cam_table':
-                # Assuming you have a parser for CAM tables
                 parse_switch_ports_and_cam(raw_text, device_config)
             elif file_type == 'arp_table':
-                # Call the new ARP parser
                 parse_cisco_arp(raw_text, device_config)
-                # OPTIONAL: Run your reconciliation logic here
-                # reconcile_network_data() 
+            elif file_type == "neighbors":
+                print(f"hostname is: {hostname.strip()}")
+                process_lldp_data(raw_text, hostname, network_name)
             
             return redirect(f"/network/?network_id={network.id}")
     # --- RETRIEVE METRICS (GET) ---
