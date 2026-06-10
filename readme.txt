@@ -21,3 +21,8 @@ Things to do:
 3. Add ability to bring more host data in.
 4. Create rules section that will allow you to create static rules.
 
+Todo:
+
+1. Add an error portion
+  1. IF an ACL breaks on run, add it to the database as an error.
+2. Fix the map.
