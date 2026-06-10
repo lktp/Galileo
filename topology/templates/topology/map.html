@@ -109,25 +109,18 @@ window.onload = function() {
             const graphData = { nodes: nodes, edges: edges };
 
             const options = {
-                // 1. Use a faster solver for larger datasets
-                physics: {
-                    solver: 'forceAtlas2Based',
-                    forceAtlas2Based: {
-                        gravitationalConstant: -5000,
-                        centralGravity: 0.01,
-                        springConstant: 0.08,
-                        springLength: 100,
-                        damping: 0.4,
-                        avoidOverlap: 1 // High value prevents bunching
-                    },
-                    // 2. Limit the stabilization effort
-                    stabilization: {
+                layout: {
+                    hierarchical: {
                         enabled: true,
-                        iterations: 100, // Stop calculating after 100 iterations
-                        updateInterval: 25,
-                        onlyDynamicEdges: false,
-                        fit: true
+                        direction: 'UD',         // Up-Down: Core at top, Switches below
+                        sortMethod: 'directed',  // Uses "from" -> "to" edges to determine depth
+                        nodeSpacing: 200,
+                        levelSeparation: 200
                     }
+                },
+                // DISABLE physics when using hierarchical layout to stop spinning
+                physics: {
+                    enabled: false
                 },
                 nodes: {
                     shape: 'dot',

@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from characterization.models import DeviceConfig, Network, Subnet
+from characterization.models import DeviceConfig, Network, Subnet, InfrastructureLink
 from .models import PortAttachment
 from hosts.models import Host, OpenPort
 
@@ -17,12 +17,12 @@ def topology_network_graph_json(request):
     network_id = request.GET.get('network_filter')
     # DEBUG: See if we are even receiving a network_id
     print(f"DEBUG: Received network_id: {network_id}")
-    
+
     # Check if the query itself is empty
     subnets = Subnet.objects.filter(network_id=network_id)
     print(f"DEBUG: Found {subnets.count()} subnets for this ID.")
     """
-    API Endpoint that dynamically maps network infrastructure switches and 
+    API Endpoint that dynamically maps network infrastructure switches and
     their host endpoint connections.
     """
     nodes = []
@@ -43,7 +43,7 @@ def topology_network_graph_json(request):
     for attach in attachments:
         if not attach.infrastructure_device:
             continue
-            
+
         # Remember this switch ID so we can force-render it next!
         active_devices.add(attach.infrastructure_device)
 
@@ -84,7 +84,7 @@ def topology_network_graph_json(request):
         if node_id not in seen_nodes:
             # Simple count mapping calculation for display
             attached_count = sum(1 for a in attachments if a.infrastructure_device_id == dev.id)
-            
+
             nodes.append({
                 'id': node_id,
                 'label': dev.hostname or f"Switch-{dev.id}",
@@ -92,57 +92,46 @@ def topology_network_graph_json(request):
                 'title': f"Type: Cisco Enterprise Device<br>Total Links: {attached_count}"
             })
             seen_nodes.add(node_id)
+    # 4. EXPLICIT INFRASTRUCTURE LINKING (BACKBONE)
+    # Only render links that are explicitly defined in the InfrastructureLink model.
+    # This prevents the "Mesh" effect and stabilizes the map physics.
 
-    # 4. INFRASTRUCTURE-TO-INFRASTRUCTURE LINKING ENGINE (VLAN Match + Network Profile Fallback)
-    dev_list = list(active_devices)
-    links_drawn = set() # Track who we've linked to prevent drawing duplicate lines
+    links = InfrastructureLink.objects.all().select_related('source_device', 'target_device')
 
-    for i, dev_a in enumerate(dev_list):
-        for dev_b in dev_list[i+1:]:
-            dev_pair = tuple(sorted([dev_a.id, dev_b.id]))
-            
-            # Match Strategy 1: Look for explicit matching VLAN configurations
-            vlans_a = set(PortAttachment.objects.filter(infrastructure_device=dev_a).values_list('vlan_id', flat=True))
-            vlans_b = set(PortAttachment.objects.filter(infrastructure_device=dev_b).values_list('vlan_id', flat=True))
-            
-            shared_vlans = vlans_a.intersection(vlans_b)
-            if 1 in shared_vlans and len(shared_vlans) > 1:
-                shared_vlans.remove(1) # Focus on explicit custom data VLANs
+    for link in links:
+        # Only draw the edge if we have a valid target device to connect to
+        if link.target_device:
+            source_id = f"dev_{link.source_device_id}"
+            target_id = f"dev_{link.target_device_id}"
 
-            if shared_vlans:
-                common_vlan = list(shared_vlans)[0]
-                edges.append({
-                    'from': f"dev_{dev_a.id}",
-                    'to': f"dev_{dev_b.id}",
-                    'label': f"Trunk (VLAN {common_vlan})",
-                    'width': 4,
-                    'color': {'color': '#0d6efd'}
-                })
-                links_drawn.add(dev_pair)
-                continue
+            # Ensure we haven't already drawn this connection to avoid redundancy
+            edge_id = f"edge_{min(link.source_device_id, link.target_device_id)}_{max(link.source_device_id, link.target_device_id)}"
 
-            # Match Strategy 2: FALLBACK RULES FOR STRIPPED SWITCH CONFIGS
-            # If both devices belong to the same parent Network model profile, bind them to the backbone tree
-            if dev_pair not in links_drawn and dev_a.network_id == dev_b.network_id:
-                
-                # Link your Layer-2 edge switches directly up to your Layer-3 network routers
-                is_switch_to_router = ('switch' in (dev_a.hostname or '').lower() and 'router' in (dev_b.hostname or '').lower()) or \
-                                      ('router' in (dev_a.hostname or '').lower() and 'switch' in (dev_b.hostname or '').lower())
-                
-                # Or bind peer switches together if they share an isolated tier
-                is_switch_peer = 'switch' in (dev_a.hostname or '').lower() and 'switch' in (dev_b.hostname or '').lower()
+            edges.append({
+                'id': edge_id,
+                'from': source_id,
+                'to': target_id,
+                'label': link.source_interface, # Label the line with the port name
+                'width': 4,
+                'color': {'color': '#0d6efd'},
+                'dashes': True, # Dashed lines distinguish trunk links from host links
+                'title': f"VLANs: {link.vlan_list}"
+            })
 
-                if is_switch_to_router or is_switch_peer:
-                    edges.append({
-                        'from': f"dev_{dev_a.id}",
-                        'to': f"dev_{dev_b.id}",
-                        'label': 'Uplink Backbone',
-                        'width': 4,
-                        'color': {'color': '#0d6efd'},
-                        'dasharray': [5, 5] # Generates a dashed line style to indicate a derived/trunk path
-                    })
-                    links_drawn.add(dev_pair)
-    print(f"DEBUG: Preparing to return. Nodes: {len(nodes)}, Edges: {len(edges)}")
+    # FINAL STEP: Ensure even switches without links are still rendered
+    # We re-verify active_devices are in the node list
+    for dev in active_devices:
+        node_id = f"dev_{dev.id}"
+        if node_id not in seen_nodes:
+            nodes.append({
+                'id': node_id,
+                'label': dev.hostname or f"Switch-{dev.id}",
+                'group': 'switch',
+                'title': f"Device: {dev.hostname}"
+            })
+            seen_nodes.add(node_id)
+
+    print(f"DEBUG: Rendering {len(nodes)} nodes and {len(edges)} edges.")
     return JsonResponse({'nodes': nodes, 'edges': edges})
 
 def get_scan_info(request, device_id):

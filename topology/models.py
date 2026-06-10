@@ -16,6 +16,7 @@ class PortAttachment(models.Model):
     # The raw MAC address detected on that port
     mac_address = models.CharField(max_length=17, help_text="e.g., 001a.a22b.11c4 or 00:1a:a2:2b:11:c4")
     vlan_id = models.IntegerField(default=1)
+    ip = models.CharField(max_length=100)
 
     class Meta:
         unique_together = ('infrastructure_device', 'interface_name', 'mac_address')
