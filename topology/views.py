@@ -93,33 +93,43 @@ def topology_network_graph_json(request):
             })
             seen_nodes.add(node_id)
     # 4. EXPLICIT INFRASTRUCTURE LINKING (BACKBONE)
-    # Only render links that are explicitly defined in the InfrastructureLink model.
-    # This prevents the "Mesh" effect and stabilizes the map physics.
-
     links = InfrastructureLink.objects.all().select_related('source_device', 'target_device')
 
+    # We'll use a set for edges to prevent duplicate connections
+    added_edges = set()
+
     for link in links:
-        # Only draw the edge if we have a valid target device to connect to
         if link.target_device:
             source_id = f"dev_{link.source_device_id}"
             target_id = f"dev_{link.target_device_id}"
 
-            # Ensure we haven't already drawn this connection to avoid redundancy
-            edge_id = f"edge_{min(link.source_device_id, link.target_device_id)}_{max(link.source_device_id, link.target_device_id)}"
+            # 1. Add both devices to 'seen_nodes' if not already there
+            for dev_id, dev_obj in [(link.source_device_id, link.source_device),
+                                (link.target_device_id, link.target_device)]:
+                node_id = f"dev_{dev_id}"
+                if node_id not in seen_nodes:
+                    nodes.append({
+                        'id': node_id,
+                        'label': dev_obj.hostname,
+                        'group': 'switch'
+                    })
+                    seen_nodes.add(node_id)
 
-            edges.append({
-                'id': edge_id,
-                'from': source_id,
-                'to': target_id,
-                'label': link.source_interface, # Label the line with the port name
-                'width': 4,
-                'color': {'color': '#0d6efd'},
-                'dashes': True, # Dashed lines distinguish trunk links from host links
-                'title': f"VLANs: {link.vlan_list}"
-            })
+            # 2. Prevent duplicate edges (bidirectional LLDP/CDP can cause this)
+            edge_key = tuple(sorted([source_id, target_id]))
+            if edge_key not in added_edges:
+                edges.append({
+                    'from': source_id,
+                    'to': target_id,
+                    'label': link.source_interface,
+                    'width': 4,
+                    'color': {'color': '#0d6efd'},
+                    'dashes': True,
+                    'title': f"VLANs: {link.vlan_list}"
+                })
+                added_edges.add(edge_key)
 
-    # FINAL STEP: Ensure even switches without links are still rendered
-    # We re-verify active_devices are in the node list
+    # 3. FINAL STEP: Add remaining devices that weren't part of an infrastructure link
     for dev in active_devices:
         node_id = f"dev_{dev.id}"
         if node_id not in seen_nodes:
